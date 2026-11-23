@@ -72,6 +72,12 @@ setInterval(()=>{
     // bola se move
     s.bola.x += s.bola.vx; s.bola.y += s.bola.vy;
     s.bola.vx *= 0.98; s.bola.vy *= 0.98;
+        // parede - a bola não pode sair do campo
+    let r = 35;
+    if(s.bola.x < r){ s.bola.x = r; s.bola.vx = Math.abs(s.bola.vx)*0.5; }
+    if(s.bola.x > 800 - r){ s.bola.x = 800 - r; s.bola.vx = -Math.abs(s.bola.vx)*0.5; }
+    if(s.bola.y < r){ s.bola.y = r; s.bola.vy = Math.abs(s.bola.vy)*0.5; }
+    if(s.bola.y > 560 - r){ s.bola.y = 560 - r; s.bola.vy = -Math.abs(s.bola.vy)*0.5; }
     // paredes
     if(s.bola.y<40||s.bola.y>520) s.bola.vy*=-1;
     if(s.bola.x<40) s.bola.vx=Math.abs(s.bola.vx);
