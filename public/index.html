@@ -4,22 +4,23 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Bola Gigante — Jogo da Turma</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#10140f;color:#f5f5ed;font-family:Arial,sans-serif}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#1c2118;gap:10px;flex-wrap:wrap}
-h1{font-size:22px;margin:0;color:#ffd12d}.tag{color:#b9c0ad;font-size:13px}
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#1a0b2e,#2d1b69,#0f0c29);color:#fff;font-family:'Fredoka',Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border-bottom:2px solid rgba(255,255,255,0.2);gap:10px;flex-wrap:wrap}
+h1{font-size:28px;margin:0;color:#FFD93D;text-shadow:0 4px 0 #E85D04,0 8px 20px rgba(0,0,0,0.5);letter-spacing:1px}.tag{color:#fff;background:rgba(255,255,255,0.15);padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600}
 main{max-width:1200px;margin:auto;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}
-.panel{background:#1c2118;border-radius:14px;padding:14px}.hidden{display:none!important}
-input,button{font:inherit;border:0;border-radius:10px;padding:12px}input{width:100%;background:#303729;color:white;margin:6px 0 10px}
-button{background:#ffd12d;color:#111;font-weight:bold;cursor:pointer;margin:4px 4px 4px 0}button.secondary{background:#343b2d;color:white}
-#arena{width:100%;height:auto;display:block;border-radius:12px;background:#c9f56a;touch-action:none}
-#scoreline{text-align:center;font-weight:bold;font-size:24px;margin:0 0 10px}
-#status{color:#c7cfbb;font-size:14px;min-height:20px}
+.panel{background:rgba(255,255,255,0.12);backdrop-filter:blur(15px);border:2px solid rgba(255,255,255,0.15);border-radius:25px;padding:18px}
+input,button{font:inherit;border:0;border-radius:18px;padding:14px}input{width:100%;background:#303729;color:white;margin:6px 0 10px}
+button{background:linear-gradient(180deg,#FFD93D,#FF9F1C);color:#111;font-weight:700;cursor:pointer;margin:4px 4px 4px 0;box-shadow:0 6px 0 rgba(0,0,0,0.3)}button:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,0.3)}button.secondary{background:linear-gradient(180deg,#4CC9F0,#4361EE);color:white}
+#arena{width:100%;height:auto;display:block;border:5px solid white;border-radius:25px;background:linear-gradient(180deg,#7ED957,#4CAF50);touch-action:none;box-shadow:0 15px 40px rgba(0,0,0,0.5)}
+#scoreline{text-align:center;font-weight:700;font-size:30px;margin:0 0 12px;color:#FFD93D;text-shadow:0 3px 0 rgba(0,0,0,0.4)}
+#status{color:#fff;font-size:14px;min-height:20px}
 #joystick{width:150px;height:150px;border-radius:50%;background:#ffffff22;border:3px solid #ffffff66;position:relative;touch-action:none;margin:12px auto}
-#stick{width:58px;height:58px;border-radius:50%;background:#ffd12d;position:absolute;left:43px;top:43px;box-shadow:0 3px 12px #0008}
-#mobileControls{text-align:center}.small{font-size:13px;color:#b9c0ad}
-#roster{max-height:360px;overflow:auto;font-size:14px;line-height:1.8}
-.blue{color:#64b5ff}.red{color:#ff827a}
-@media(max-width:800px){main{grid-template-columns:1fr;padding:8px}#side{order:2}header{padding:10px}h1{font-size:19px}}
+#stick{width:58px;height:58px;border-radius:50%;background:#FFD93D;position:absolute;left:43px;top:43px;box-shadow:0 3px 12px #0008}
+#mobileControls{text-align:center}small{font-size:13px;color:#ddd}
+.roster{max-height:360px;overflow:auto;font-size:14px;line-height:1.8}
+.blue{color:#4CC9F0;font-weight:700}.red{color:#FF4D6D;font-weight:700}
+@media(max-width:800px){main{grid-template-columns:1fr;padding:8px}#side{order:2}header{padding:10px}h1{font-size:20px}}
 </style>
 </head>
 <body>
