@@ -1,169 +1,98 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const crypto = require("crypto");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-const PORT = process.env.PORT || 3000;
+const io = new Server(server);
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(express.static("public"));
-app.get("/health", (_req, res) => res.json({ ok: true, game: "Bola Gigante" }));
+let salas = {};
 
-const rooms = new Map();
-const W = 1000, H = 560, BALL_R = 62, PLAYER_R = 15;
-const MAX_PER_TEAM = 30;
-
-function code() { return String(Math.floor(1000 + Math.random() * 9000)); }
-function freshRoom(roomCode, hostId) {
+function criarEstado(){
   return {
-    code: roomCode, hostId, players: new Map(),
-    ball: { x: W / 2, y: H / 2, vx: 0, vy: 0 },
-    score: { blue: 0, red: 0 }, timeLeft: 180, running: false,
-    lastTick: Date.now(), lastGoal: 0
+    bola: { x: 400, y: 300, vx: 0, vy: 0 },
+    placar: { azul: 0, vermelho: 0 },
+    tempo: 120, // 2 minutos
+    jogando: false,
+    jogadores: []
   };
 }
-function snapshot(room) {
-  return {
-    code: room.code, running: room.running, score: room.score,
-    timeLeft: room.timeLeft, ball: room.ball,
-    players: [...room.players.values()].map(p => ({
-      id: p.id, name: p.name, team: p.team, x: p.x, y: p.y
-    }))
-  };
-}
-function emitRoom(room) { io.to(room.code).emit("state", snapshot(room)); }
-function assignTeam(room) {
-  const blue = [...room.players.values()].filter(p => p.team === "blue" && !p.host).length;
-  const red = [...room.players.values()].filter(p => p.team === "red" && !p.host).length;
-  if (blue >= MAX_PER_TEAM && red >= MAX_PER_TEAM) return null;
-  return blue <= red && blue < MAX_PER_TEAM ? "blue" : "red";
-}
 
-io.on("connection", socket => {
-  socket.on("createRoom", ({ name } = {}, cb = () => {}) => {
-    const roomCode = code();
-    const room = freshRoom(roomCode, socket.id);
-    rooms.set(roomCode, room);
-    socket.join(roomCode);
-    const player = { id: socket.id, name: cleanName(name || "Professor"), team: "blue",
-      x: 130, y: H/2, vx: 0, vy: 0, input: { x: 0, y: 0 }, host: true };
-    room.players.set(socket.id, player);
-    socket.data.roomCode = roomCode;
-    cb({ ok: true, code: roomCode, host: true, team: "blue" });
-    emitRoom(room);
+io.on('connection', (socket) => {
+  socket.on('criar_sala', ({ nome }) => {
+    const codigo = Math.floor(1000 + Math.random() * 9000).toString();
+    salas[codigo] = criarEstado();
+    salas[codigo].professor = socket.id;
+    socket.join(codigo);
+    socket.emit('sala_criada', { codigo });
   });
 
-  socket.on("joinRoom", ({ code: roomCode, name } = {}, cb = () => {}) => {
-    const room = rooms.get(String(roomCode || "").trim());
-    if (!room) return cb({ ok: false, error: "Sala não encontrada. Confira o código." });
-    if (room.players.size >= MAX_PER_TEAM * 2 + 1) return cb({ ok: false, error: "A sala já está com 60 alunos." });
-    const team = assignTeam(room);
-    if (!team) return cb({ ok: false, error: "As duas equipes já têm 30 alunos." });
-    const count = [...room.players.values()].filter(p => p.team === team && !p.host).length;
-    const player = { id: socket.id, name: cleanName(name || "Aluno"),
-      team, x: team === "blue" ? 180 : W - 180,
-      y: 90 + (count % 12) * 32, vx: 0, vy: 0, input: { x: 0, y: 0 }, host: false };
-    room.players.set(socket.id, player);
-    socket.join(roomCode);
-    socket.data.roomCode = roomCode;
-    cb({ ok: true, code: roomCode, host: false, team });
-    emitRoom(room);
+  socket.on('entrar_sala', ({ nome, codigo, personagem, time }) => {
+    if (!salas[codigo]) return socket.emit('erro', 'Sala não encontrada!');
+    socket.join(codigo);
+    socket.data.codigo = codigo;
+    salas[codigo].jogadores.push({ id: socket.id, nome, personagem, time, x: time==='azul'?100:700, y: 200+Math.random()*200 });
+    io.to(codigo).emit('atualizar', salas[codigo]);
   });
 
-  socket.on("input", data => {
-    const room = rooms.get(socket.data.roomCode);
-    const p = room && room.players.get(socket.id);
-    if (!p || p.host || !data) return;
-    const x = Number(data.x), y = Number(data.y);
-    p.input.x = Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0;
-    p.input.y = Number.isFinite(y) ? Math.max(-1, Math.min(1, y)) : 0;
-  });
-
-  socket.on("hostAction", action => {
-    const room = rooms.get(socket.data.roomCode);
-    if (!room || room.hostId !== socket.id) return;
-    if (action === "start") { room.running = true; room.lastTick = Date.now(); }
-    if (action === "pause") room.running = false;
-    if (action === "reset") {
-      room.running = false; room.score = { blue: 0, red: 0 }; room.timeLeft = 180;
-      room.ball = { x: W/2, y: H/2, vx: 0, vy: 0 };
-      for (const p of room.players.values()) {
-        p.x = p.team === "blue" ? 180 : W-180; p.y = H/2; p.vx = p.vy = 0;
-      }
+  socket.on('mover', ({ codigo, x, y }) => {
+    const sala = salas[codigo]; if(!sala) return;
+    const j = sala.jogadores.find(p=>p.id===socket.id); if(!j) return;
+    j.x=x; j.y=y;
+    // EMPURRAR A BOLA
+    const dx = sala.bola.x - j.x, dy = sala.bola.y - j.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist < 70){
+      sala.bola.vx += (dx/dist)*3;
+      sala.bola.vy += (dy/dist)*3;
     }
-    emitRoom(room);
   });
 
-  socket.on("disconnect", () => {
-    const roomCode = socket.data.roomCode;
-    const room = rooms.get(roomCode);
-    if (!room) return;
-    room.players.delete(socket.id);
-    if (room.hostId === socket.id) {
-      room.running = false;
-      io.to(roomCode).emit("roomClosed", "O professor encerrou a sala.");
-      rooms.delete(roomCode);
-    } else {
-      emitRoom(room);
-      if (room.players.size === 0) rooms.delete(roomCode);
-    }
+  socket.on('iniciar_jogo', ({ codigo }) => {
+    const sala = salas[codigo]; if(!sala) return;
+    sala.jogando = true; sala.tempo = 120; sala.placar={azul:0,vermelho:0};
+    sala.bola={x:400,y:300,vx:0,vy:0};
+    io.to(codigo).emit('atualizar', sala);
+  });
+
+  socket.on('disconnect', ()=>{
+    const codigo = socket.data.codigo; if(!codigo || !salas[codigo]) return;
+    salas[codigo].jogadores = salas[codigo].jogadores.filter(p=>p.id!==socket.id);
+    io.to(codigo).emit('atualizar', salas[codigo]);
   });
 });
 
-function cleanName(s) { return String(s).replace(/[<>]/g, "").trim().slice(0, 18) || "Aluno"; }
-
-setInterval(() => {
-  const now = Date.now();
-  for (const room of rooms.values()) {
-    const dt = Math.min((now - room.lastTick) / 1000, 0.05);
-    room.lastTick = now;
-    if (!room.running) continue;
-
-    for (const p of room.players.values()) {
-      if (p.host) continue;
-      const speed = 210;
-      p.vx = p.input.x * speed;
-      p.vy = p.input.y * speed;
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      p.x = Math.max(PLAYER_R, Math.min(W-PLAYER_R, p.x));
-      p.y = Math.max(PLAYER_R, Math.min(H-PLAYER_R, p.y));
-
-      const dx = room.ball.x - p.x, dy = room.ball.y - p.y;
-      const dist = Math.hypot(dx, dy) || 0.001;
-      if (dist < BALL_R + PLAYER_R) {
-        const nx = dx/dist, ny = dy/dist;
-        const overlap = BALL_R + PLAYER_R - dist;
-        room.ball.x += nx * overlap * 0.55;
-        room.ball.y += ny * overlap * 0.55;
-        room.ball.vx += nx * 210 * dt + p.input.x * 115 * dt;
-        room.ball.vy += ny * 210 * dt + p.input.y * 115 * dt;
-      }
+// LOOP DO JOGO - física da bola, gol e tempo
+setInterval(()=>{
+  for(let codigo in salas){
+    const s = salas[codigo];
+    if(!s.jogando) continue;
+    // bola se move
+    s.bola.x += s.bola.vx; s.bola.y += s.bola.vy;
+    s.bola.vx *= 0.98; s.bola.vy *= 0.98;
+    // paredes
+    if(s.bola.y<40||s.bola.y>520) s.bola.vy*=-1;
+    if(s.bola.x<40) s.bola.vx=Math.abs(s.bola.vx);
+    if(s.bola.x>760) s.bola.vx=-Math.abs(s.bola.vx);
+    // GOL
+    if(s.bola.x<50 && s.bola.y>220 && s.bola.y<380){
+      s.placar.vermelho++; s.bola={x:400,y:300,vx:0,vy:0};
+      io.to(codigo).emit('gol', '🔴 TIME VERMELHO FEZ GOL!');
     }
-
-    room.ball.x += room.ball.vx * dt;
-    room.ball.y += room.ball.vy * dt;
-    room.ball.vx *= Math.pow(0.985, dt * 60);
-    room.ball.vy *= Math.pow(0.985, dt * 60);
-    room.ball.y = Math.max(BALL_R, Math.min(H-BALL_R, room.ball.y));
-    if (room.ball.x < BALL_R) { room.ball.x = BALL_R; room.ball.vx *= -0.45; }
-    if (room.ball.x > W-BALL_R) { room.ball.x = W-BALL_R; room.ball.vx *= -0.45; }
-
-    // Gols nas aberturas centrais das linhas de fundo.
-    const goalTop = H/2 - 135, goalBottom = H/2 + 135;
-    if (room.ball.x <= BALL_R + 3 && room.ball.y > goalTop && room.ball.y < goalBottom && now-room.lastGoal > 1300) {
-      room.score.red++; resetBall(room); room.lastGoal = now;
-    } else if (room.ball.x >= W-BALL_R-3 && room.ball.y > goalTop && room.ball.y < goalBottom && now-room.lastGoal > 1300) {
-      room.score.blue++; resetBall(room); room.lastGoal = now;
+    if(s.bola.x>750 && s.bola.y>220 && s.bola.y<380){
+      s.placar.azul++; s.bola={x:400,y:300,vx:0,vy:0};
+      io.to(codigo).emit('gol', '🔵 TIME AZUL FEZ GOL!');
     }
-    room.timeLeft -= dt;
-    if (room.timeLeft <= 0) { room.timeLeft = 0; room.running = false; }
-    emitRoom(room);
+    s.tempo--;
+    if(s.tempo<=0){
+      s.jogando=false;
+      io.to(codigo).emit('fim', s.placar);
+    }
+    io.to(codigo).emit('atualizar', s);
   }
-}, 33);
+}, 1000/30);
 
-function resetBall(room) {
-  room.ball = { x: W/2, y: H/2, vx: 0, vy: 0 };
-}
-server.listen(PORT, () => console.log(`Bola Gigante rodando na porta ${PORT}`));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, ()=>console.log('Rodando '+PORT));
