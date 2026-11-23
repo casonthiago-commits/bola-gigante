@@ -66,44 +66,57 @@ io.on('connection', (socket) => {
 
 // LOOP DO JOGO - física da bola, gol e tempo
 setInterval(()=>{
+  setInterval(()=>{
   for(let codigo in salas){
-    const s = salas[codigo];
+    let s=salas[codigo];
     if(!s.jogando) continue;
-    // bola se move
-    s.bola.x += s.bola.vx; s.bola.y += s.bola.vy;
-    s.bola.vx *= 0.98; s.bola.vy *= 0.98;
-        // parede - a bola não pode sair do campo
-    let r = 35;
-    if(s.bola.x < r){ s.bola.x = r; s.bola.vx = Math.abs(s.bola.vx)*0.5; }
-    if(s.bola.x > 800 - r){ s.bola.x = 800 - r; s.bola.vx = -Math.abs(s.bola.vx)*0.5; }
-    if(s.bola.y < r){ s.bola.y = r; s.bola.vy = Math.abs(s.bola.vy)*0.5; }
-    if(s.bola.y > 560 - r){ s.bola.y = 560 - r; s.bola.vy = -Math.abs(s.bola.vy)*0.5; }
-    // paredes
-    if(s.bola.y<40||s.bola.y>520) s.bola.vy*=-1;
-    if(s.bola.x<40) s.bola.vx=Math.abs(s.bola.vx);
-    if(s.bola.x>760) s.bola.vx=-Math.abs(s.bola.vx);
-    // GOL
-    if(s.bola.x<50 && s.bola.y>220 && s.bola.y<380){
-      s.placar.vermelho++; s.bola={x:400,y:300,vx:0,vy:0};
-      io.to(codigo).emit('gol', '🔴 TIME VERMELHO FEZ GOL!');
+
+    // JOGADORES - trava dentro do campo
+    for(let id in s.jogadores){
+      let j=s.jogadores[id];
+      if(j.x<20) j.x=20;
+      if(j.x>780) j.x=780;
+      if(j.y<20) j.y=20;
+      if(j.y>540) j.y=540;
     }
-    if(s.bola.x>750 && s.bola.y>220 && s.bola.y<380){
-      s.placar.azul++; s.bola={x:400,y:300,vx:0,vy:0};
-      io.to(codigo).emit('gol', '🔵 TIME AZUL FEZ GOL!');
+
+    // BOLA - empurrão dos jogadores
+    for(let id in s.jogadores){
+      let j=s.jogadores[id];
+      let dx=s.bola.x-j.x, dy=s.bola.y-j.y;
+      let d=Math.sqrt(dx*dx+dy*dy);
+      if(d<60 && d>0){
+        s.bola.vx += dx/d*2.2;
+        s.bola.vy += dy/d*2.2;
+      }
     }
-       // tempo só desce 1 vez por segundo, não 30x
-    if(!s.contador) s.contador = 0;
+    s.bola.x+=s.bola.vx;
+    s.bola.y+=s.bola.vy;
+    s.bola.vx*=0.98; s.bola.vy*=0.98;
+
+    // GOL - só entra se estiver no meio, entre 200 e 360
+    let noGol = s.bola.y > 200 && s.bola.y < 360;
+    if(s.bola.x < 0 && noGol){ s.placar.vermelho++; s.bola={x:400,y:280,vx:0,vy:0}; }
+    if(s.bola.x > 800 && noGol){ s.placar.azul++; s.bola={x:400,y:280,vx:0,vy:0}; }
+
+    // PAREDES - bola bate e volta, menos na boca do gol
+    let r=35;
+    if(s.bola.y < r){ s.bola.y=r; s.bola.vy=Math.abs(s.bola.vy)*0.6; }
+    if(s.bola.y > 560-r){ s.bola.y=560-r; s.bola.vy=-Math.abs(s.bola.vy)*0.6; }
+    if(s.bola.x < r && !noGol){ s.bola.x=r; s.bola.vx=Math.abs(s.bola.vx)*0.6; }
+    if(s.bola.x > 800-r && !noGol){ s.bola.x=800-r; s.bola.vx=-Math.abs(s.bola.vx)*0.6; }
+
+    // TEMPO
+    if(!s.contador) s.contador=0;
     s.contador++;
-    if(s.contador % 30 === 0){
-      s.tempo--;
-    }
+    if(s.contador % 30 === 0){ s.tempo--; }
     if(s.tempo<=0){
       s.jogando=false;
-      io.to(codigo).emit('fim', s.placar);
+      io.to(codigo).emit('fim',s.placar);
     }
-    io.to(codigo).emit('atualizar', s);
+    io.to(codigo).emit('estado',s);
   }
-}, 1000/30);
+},1000/30);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, ()=>console.log('Rodando '+PORT));
