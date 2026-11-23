@@ -92,8 +92,8 @@ const canvas=$('arena'),ctx=canvas.getContext('2d');
 function draw(){
  if(!currentState)return;const s=currentState;
  ctx.clearRect(0,0,1000,560);
- ctx.fillStyle='#d8f56b';ctx.fillRect(0,0,1000,560);
- ctx.fillStyle='#e7f7a1';ctx.fillRect(18,18,964,524);
+ctx.fillStyle='#2ECC71';ctx.fillRect(0,0,1000,560);
+ctx.fillStyle='#27AE60';ctx.fillRect(18,18,964,524);
  ctx.strokeStyle='white';ctx.lineWidth=6;ctx.strokeRect(18,18,964,524);
  ctx.beginPath();ctx.moveTo(500,18);ctx.lineTo(500,542);ctx.stroke();
  ctx.beginPath();ctx.arc(500,280,82,0,Math.PI*2);ctx.stroke();
