@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Bola Gigante — Jogo da Turma</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10140f;color:#f5f5ed;font-family:Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#1c2118;gap:10px;flex-wrap:wrap}
+h1{font-size:22px;margin:0;color:#ffd12d}.tag{color:#b9c0ad;font-size:13px}
+main{max-width:1200px;margin:auto;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}
+.panel{background:#1c2118;border-radius:14px;padding:14px}.hidden{display:none!important}
+input,button{font:inherit;border:0;border-radius:10px;padding:12px}input{width:100%;background:#303729;color:white;margin:6px 0 10px}
+button{background:#ffd12d;color:#111;font-weight:bold;cursor:pointer;margin:4px 4px 4px 0}button.secondary{background:#343b2d;color:white}
+#arena{width:100%;height:auto;display:block;border-radius:12px;background:#c9f56a;touch-action:none}
+#scoreline{text-align:center;font-weight:bold;font-size:24px;margin:0 0 10px}
+#status{color:#c7cfbb;font-size:14px;min-height:20px}
+#joystick{width:150px;height:150px;border-radius:50%;background:#ffffff22;border:3px solid #ffffff66;position:relative;touch-action:none;margin:12px auto}
+#stick{width:58px;height:58px;border-radius:50%;background:#ffd12d;position:absolute;left:43px;top:43px;box-shadow:0 3px 12px #0008}
+#mobileControls{text-align:center}.small{font-size:13px;color:#b9c0ad}
+#roster{max-height:360px;overflow:auto;font-size:14px;line-height:1.8}
+.blue{color:#64b5ff}.red{color:#ff827a}
+@media(max-width:800px){main{grid-template-columns:1fr;padding:8px}#side{order:2}header{padding:10px}h1{font-size:19px}}
+</style>
+</head>
+<body>
+<header><div><h1>⚽ BOLA GIGANTE</h1><div class="tag">Jogo multiplayer da turma</div></div><div id="roomLabel" class="tag">Crie uma sala para começar</div></header>
+<main>
+<section>
+<div class="panel" id="setup">
+<h2>Entrar no jogo</h2>
+<label>Seu nome</label><input id="name" maxlength="18" placeholder="Digite seu nome">
+<div id="teacherSetup"><button onclick="createRoom()">CRIAR SALA (PROFESSOR)</button></div>
+<div style="border-top:1px solid #394032;margin:14px 0;padding-top:12px">
+<label>Código da sala</label><input id="roomCode" inputmode="numeric" maxlength="4" placeholder="Ex.: 3049">
+<button class="secondary" onclick="joinRoom()">ENTRAR COMO ALUNO</button>
+</div><div id="status"></div>
+</div>
+<div class="panel hidden" id="game">
+<div id="scoreline"><span class="blue">AZUL 0</span>　×　<span class="red">0 VERMELHO</span></div>
+<canvas id="arena" width="1000" height="560"></canvas>
+<div id="mobileControls" class="hidden"><div class="small">Toque e arraste o controle para movimentar seu jogador</div><div id="joystick"><div id="stick"></div></div></div>
+<div id="hostControls" class="hidden"><button onclick="action('start')">INICIAR</button><button class="secondary" onclick="action('pause')">PAUSAR</button><button class="secondary" onclick="action('reset')">REINICIAR</button></div>
+<div id="statusGame" class="small"></div>
+</div>
+</section>
+<aside class="panel" id="side">
+<h2>Como jogar</h2>
+<p class="small">O objetivo é empurrar a SUPER BOLA GIGANTE até a linha de gol adversária. Os personagens correm e se movimentam pela quadra. Cada aluno controla seu personagem pelo celular.</p>
+<div id="roomCodeDisplay" style="font-size:34px;color:#ffd12d;font-weight:bold">----</div>
+<div class="small">Código para compartilhar com a turma</div>
+<hr style="border-color:#394032;margin:16px 0">
+<h3>Participantes <span id="count">0/60</span></h3><div id="roster">Aguardando jogadores...</div>
+</aside>
+</main>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io(); let myId=null, isHost=false, myTeam=null, currentState=null;
+const $=id=>document.getElementById(id);
+function msg(t){$('status').textContent=t}
+function showGame(){ $('setup').classList.add('hidden'); $('game').classList.remove('hidden'); }
+function createRoom(){
+ socket.emit('createRoom',{name:$('name').value||'Professor'},r=>{
+  if(!r.ok)return msg(r.error); myId=socket.id;isHost=true;myTeam=r.team;
+  $('roomCodeDisplay').textContent=r.code;$('roomLabel').textContent='SALA '+r.code;
+  $('hostControls').classList.remove('hidden');showGame();
+ });
+}
+function joinRoom(){
+ const c=$('roomCode').value.trim(); if(!c)return msg('Digite o código da sala.');
+ socket.emit('joinRoom',{code:c,name:$('name').value||'Aluno'},r=>{
+  if(!r.ok)return msg(r.error);myId=socket.id;isHost=false;myTeam=r.team;
+  $('roomCodeDisplay').textContent=r.code;$('roomLabel').textContent='SALA '+r.code+' • EQUIPE '+r.team.toUpperCase();
+  $('mobileControls').classList.remove('hidden');showGame();
+ });
+}
+function action(a){socket.emit('hostAction',a)}
+socket.on('connect',()=>myId=socket.id);
+socket.on('state',s=>{currentState=s;draw();updatePanel()});
+socket.on('roomClosed',m=>{alert(m);location.reload()});
+function updatePanel(){
+ if(!currentState)return;
+ const s=currentState;
+ $('scoreline').innerHTML=`<span class="blue">AZUL ${s.score.blue}</span>　×　<span class="red">${s.score.red} VERMELHO</span>　 <small>${Math.floor(s.timeLeft/60)}:${String(Math.floor(s.timeLeft%60)).padStart(2,'0')}</small>`;
+ $('count').textContent=s.players.filter(p=>!p.host).length+'/60';
+ $('roster').innerHTML=['blue','red'].map(team=>`<b class="${team}">${team==='blue'?'AZUL':'VERMELHO'}</b><br>`+
+ s.players.filter(p=>p.team===team).map(p=>`• ${escapeHtml(p.name)}${p.host?' (professor)':''}`).join('<br>')).join('<br><br>');
+ $('statusGame').textContent=s.running?'PARTIDA EM ANDAMENTO':(s.timeLeft===0?'FIM DE JOGO':'Aguardando o professor iniciar');
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const canvas=$('arena'),ctx=canvas.getContext('2d');
+function draw(){
+ if(!currentState)return;const s=currentState;
+ ctx.clearRect(0,0,1000,560);
+ ctx.fillStyle='#d8f56b';ctx.fillRect(0,0,1000,560);
+ ctx.fillStyle='#e7f7a1';ctx.fillRect(18,18,964,524);
+ ctx.strokeStyle='white';ctx.lineWidth=6;ctx.strokeRect(18,18,964,524);
+ ctx.beginPath();ctx.moveTo(500,18);ctx.lineTo(500,542);ctx.stroke();
+ ctx.beginPath();ctx.arc(500,280,82,0,Math.PI*2);ctx.stroke();
+ // Áreas e gols
+ ctx.fillStyle='#67e6cf';ctx.fillRect(18,145,115,270);ctx.fillRect(867,145,115,270);
+ ctx.strokeRect(18,145,115,270);ctx.strokeRect(867,145,115,270);
+ ctx.fillStyle='#263b2a';ctx.fillRect(0,220,18,120);ctx.fillRect(982,220,18,120);
+ // Bola gigante: maior, com painéis, brilho e leve balanço visual
+ const b=s.ball, now=performance.now()/1000, ballPulse=1+Math.sin(now*5)*0.025;
+ ctx.save();ctx.translate(b.x,b.y);ctx.scale(ballPulse,ballPulse);
+ ctx.shadowColor='#0008';ctx.shadowBlur=18;ctx.shadowOffsetY=9;
+ const ballGrad=ctx.createRadialGradient(-22,-25,5,0,0,66);
+ ballGrad.addColorStop(0,'#ffffff');ballGrad.addColorStop(.72,'#f3f5f0');ballGrad.addColorStop(1,'#aeb8b4');
+ ctx.fillStyle=ballGrad;ctx.beginPath();ctx.arc(0,0,62,0,Math.PI*2);ctx.fill();ctx.restore();
+ ctx.save();ctx.translate(b.x,b.y);ctx.strokeStyle='#25313a';ctx.lineWidth=3;
+ ctx.beginPath();ctx.arc(0,0,62,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle='#25313a';ctx.beginPath();ctx.arc(0,0,19,0,Math.PI*2);ctx.fill();
+ for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ctx.beginPath();ctx.arc(Math.cos(a)*39,Math.sin(a)*39,11,0,Math.PI*2);ctx.fill()}
+ ctx.restore();
+
+ // Personagens de desenho animado: braços e pernas se mexem enquanto correm.
+ for(const p of s.players){
+  const moving=Math.hypot(p.vx||0,p.vy||0)>10;
+  const phase=now*11+(p.x+p.y)*.025;
+  const swing=moving?Math.sin(phase)*7:Math.sin(now*2.5+p.x*.03)*1.8;
+  const teamColor=p.team==='blue'?'#1689ee':'#ef5149';
+  const dark=p.team==='blue'?'#07549d':'#a92525';
+  ctx.save();ctx.translate(p.x,p.y);
+  // sombra
+  ctx.fillStyle='#0003';ctx.beginPath();ctx.ellipse(0,12,17,7,0,0,Math.PI*2);ctx.fill();
+  // pernas animadas
+  ctx.strokeStyle='#25313a';ctx.lineWidth=5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-5,7);ctx.lineTo(-7+swing,19);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(5,7);ctx.lineTo(7-swing,19);ctx.stroke();
+  // tênis
+  ctx.strokeStyle='#f7f7f2';ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(-7+swing,19);ctx.lineTo(-13+swing,20);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(7-swing,19);ctx.lineTo(13-swing,20);ctx.stroke();
+  // braços em movimento
+  ctx.strokeStyle=dark;ctx.lineWidth=6;
+  ctx.beginPath();ctx.moveTo(-10,-5);ctx.lineTo(-18-swing*.65,3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(10,-5);ctx.lineTo(18+swing*.65,3);ctx.stroke();
+  // camisa e contorno
+  ctx.fillStyle=teamColor;ctx.beginPath();ctx.roundRect(-12,-13,24,25,8);ctx.fill();
+  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+  // cabeça
+  ctx.fillStyle='#b9784f';ctx.beginPath();ctx.arc(0,-22,10,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#34251f';ctx.beginPath();ctx.arc(0,-27,10,Math.PI,Math.PI*2);ctx.fill();
+  // rosto
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-3,-22,2.3,0,Math.PI*2);ctx.arc(4,-22,2.3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#17202a';ctx.beginPath();ctx.arc(-2.5,-22,1.1,0,Math.PI*2);ctx.arc(4.5,-22,1.1,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#542d24';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(1,-18,3,0.15,Math.PI-.15);ctx.stroke();
+  // nome em plaquinha
+  ctx.font='bold 13px Arial';ctx.textAlign='center';
+  const label=p.name.slice(0,11), tw=ctx.measureText(label).width+12;
+  ctx.fillStyle='#ffffffed';ctx.beginPath();ctx.roundRect(-tw/2,-48,tw,17,6);ctx.fill();
+  ctx.fillStyle='#17202a';ctx.fillText(label,0,-36);
+  if(p.id===myId){ctx.strokeStyle='#ffe45c';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,25,0,Math.PI*2);ctx.stroke()}
+  ctx.restore();
+ }
+}
+let active=false, joyCenter=null;
+const joy=$('joystick'),stick=$('stick');
+function moveJoy(e){
+ if(!active)return;const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ let dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy),max=48;
+ if(dist>max){dx=dx/dist*max;dy=dy/dist*max}
+ stick.style.left=(43+dx)+'px';stick.style.top=(43+dy)+'px';
+ socket.emit('input',{x:dx/max,y:dy/max});
+}
+function stopJoy(){active=false;stick.style.left='43px';stick.style.top='43px';socket.emit('input',{x:0,y:0})}
+joy.addEventListener('pointerdown',e=>{active=true;joy.setPointerCapture(e.pointerId);moveJoy(e)});
+joy.addEventListener('pointermove',moveJoy);joy.addEventListener('pointerup',stopJoy);joy.addEventListener('pointercancel',stopJoy);
+</script>
+</body></html>
