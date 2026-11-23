@@ -85,7 +85,12 @@ setInterval(()=>{
       s.placar.azul++; s.bola={x:400,y:300,vx:0,vy:0};
       io.to(codigo).emit('gol', '🔵 TIME AZUL FEZ GOL!');
     }
-    s.tempo--;
+       // tempo só desce 1 vez por segundo, não 30x
+    if(!s.contador) s.contador = 0;
+    s.contador++;
+    if(s.contador % 30 === 0){
+      s.tempo--;
+    }
     if(s.tempo<=0){
       s.jogando=false;
       io.to(codigo).emit('fim', s.placar);
