@@ -102,24 +102,25 @@ function draw(){
  ctx.strokeRect(18,145,115,270);ctx.strokeRect(867,145,115,270);
  ctx.fillStyle='#263b2a';ctx.fillRect(0,220,18,120);ctx.fillRect(982,220,18,120);
  // Bola gigante: maior, com painéis, brilho e leve balanço visual
- const b=s.ball, now=performance.now()/1000, ballPulse=1+Math.sin(now*5)*0.025;
+ 
  ctx.save();ctx.translate(b.x,b.y);ctx.scale(ballPulse,ballPulse);
  ctx.shadowColor='#0008';ctx.shadowBlur=18;ctx.shadowOffsetY=9;
  const ballGrad=ctx.createRadialGradient(-22,-25,5,0,0,66);
  ballGrad.addColorStop(0,'#ffffff');ballGrad.addColorStop(.72,'#f3f5f0');ballGrad.addColorStop(1,'#aeb8b4');
- ctx.fillStyle=ballGrad;ctx.beginPath();ctx.arc(0,0,62,0,Math.PI*2);ctx.fill();ctx.restore();
- ctx.save();ctx.translate(b.x,b.y);ctx.strokeStyle='#25313a';ctx.lineWidth=3;
- ctx.beginPath();ctx.arc(0,0,62,0,Math.PI*2);ctx.stroke();
- ctx.fillStyle='#25313a';ctx.beginPath();ctx.arc(0,0,19,0,Math.PI*2);ctx.fill();
- for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ctx.beginPath();ctx.arc(Math.cos(a)*39,Math.sin(a)*39,11,0,Math.PI*2);ctx.fill()}
- ctx.restore();
+ 
+ctx.save();ctx.translate(ball.x,ball.y);ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=14;ctx.shadowOffsetY=8;
+let g=ctx.createRadialGradient(-20,-20,10,0,0,62);g.addColorStop(0,'#ffffff');g.addColorStop(0.6,'#e8e8e8');g.addColorStop(1,'#9a9a9a');
+ctx.beginPath();ctx.arc(0,0,62,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=3;ctx.strokeStyle='#222';ctx.stroke();
+ctx.fillStyle='#111';ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();
+for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ctx.beginPath();ctx.arc(Math.cos(a)*39,Math.sin(a)*39,13,0,Math.PI*2);ctx.fill();}
+ctx.restore();
 
  // Personagens de desenho animado: braços e pernas se mexem enquanto correm.
  for(const p of s.players){
   const moving=Math.hypot(p.vx||0,p.vy||0)>10;
   const phase=now*11+(p.x+p.y)*.025;
-  const swing=moving?Math.sin(phase)*7:Math.sin(now*2.5+p.x*.03)*1.8;
-  const teamColor=p.team==='blue'?'#1689ee':'#ef5149';
+  const teamColor=p.team==='blue'?'#2D9CDB':'#FF4757';
+const dark=p.team==='blue'?'#1B6FA8':'#C0392B';
   const dark=p.team==='blue'?'#07549d':'#a92525';
   ctx.save();ctx.translate(p.x,p.y);
   // sombra
