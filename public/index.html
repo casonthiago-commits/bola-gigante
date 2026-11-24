@@ -2,35 +2,33 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BOLA GIGANTE - Empurra com Tempo e Placar</title>
+<title>BOLA GIGANTE</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
 body{background:#7EC8FF;overflow:auto}
 .topo{text-align:center;padding:8px}
 .topo h1{font-size:36px;color:#FF6B00;text-shadow:2px 2px 0 #fff}
-.placar{display:flex;justify-content:center;gap:12px;align-items:center;margin:5px}
+.placar{display:flex;justify-content:center;gap:12px;margin:5px}
 .placar div{background:#fff;padding:8px 18px;border-radius:15px;font-weight:900;font-size:22px}
 #tempo{background:#FFD800}
-.card{background:#fff;width:92%;max-width:380px;margin:10px auto;padding:16px;border-radius:20px;text-align:center;box-shadow:0 10px 20px rgba(0,0,0,.2)}
+.card{background:#fff;width:92%;max-width:380px;margin:10px auto;padding:16px;border-radius:20px;text-align:center}
 input{width:100%;padding:12px;border-radius:12px;border:2px solid #ddd;margin:6px 0}
 .pers{display:flex;justify-content:center;gap:8px;font-size:36px}
 .pers span{cursor:pointer;padding:5px;border-radius:12px}
 .pers span.ativo{border:3px solid #FF6B00;background:#FFF0E0}
 .times{display:flex;gap:8px;margin:8px 0}
-.times button{flex:1;padding:12px;border:3px solid transparent;border-radius:12px;font-weight:900;cursor:pointer}
+.times button{flex:1;padding:12px;border-radius:12px;font-weight:900;cursor:pointer;color:#fff;border:3px solid transparent}
 .times button.ativo{border-color:#000;transform:scale(1.05)}
 button{width:100%;padding:14px;border:none;border-radius:14px;font-weight:900;color:#fff;margin-top:8px;cursor:pointer}
 .btn-prof{background:#FF6B00}.btn-aluno{background:#1A5CFF}.btn-iniciar{background:#00C853}
-#campo{display:none;position:relative;width:100%;max-width:800px;height:560px;margin:auto;background:#2ECC71;border:4px solid #fff;border-radius:12px;overflow:hidden}
-.gol{position:absolute;top:200px;width:14px;height:160px}
+#campo{display:none;position:relative;width:800px;max-width:96vw;height:560px;margin:auto;background:#2ECC71;border:4px solid #fff;border-radius:12px;overflow:hidden;touch-action:none}
+.gol{position:absolute;top:200px;width:16px;height:160px;z-index:1}
 .golE{left:0;background:#1A5CFF}.golD{right:0;background:#FF0000}
 .linha{position:absolute;left:50%;top:0;bottom:0;width:3px;background:#fff}
 .circulo{position:absolute;left:50%;top:50%;width:120px;height:120px;border:3px solid #fff;border-radius:50%;transform:translate(-50%,-50%)}
-#bola{position:absolute;width:110px;height:110px;border-radius:50%;background:conic-gradient(#FF0000,#FFD800,#00FF00,#00BFFF,#FF00FF,#FF0000);display:flex;align-items:center;justify-content:center;font-size:48px;box-shadow:0 8px 15px rgba(0,0,0,.4);animation:girar 1.5s linear infinite;z-index:5}
-@keyframes girar{to{transform:rotate(360deg)}}
-.jogador{position:absolute;text-align:center;z-index:6;animation:balanço .8s ease-in-out infinite alternate}
-@keyframes balanço{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
+#bola{position:absolute;width:70px;height:70px;border-radius:50%;background:conic-gradient(#FF0000,#FFD800,#00FF00,#00BFFF,#FF00FF,#FF0000);display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 8px 15px rgba(0,0,0,.4);z-index:5;transform:translate(-50%,-50%)}
+.jogador{position:absolute;text-align:center;z-index:6;transform:translate(-50%,-50%)}
 .jogador .emoji{font-size:48px;display:block}
 .jogador .nome{background:#fff;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:bold}
 #msgGol{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:15px 25px;border-radius:20px;font-size:26px;font-weight:900;display:none;z-index:20}
@@ -38,41 +36,22 @@ button{width:100%;padding:14px;border:none;border-radius:14px;font-weight:900;co
 </head>
 <body>
 <div class="topo"><h1>🌈 BOLA GIGANTE</h1></div>
-<div class="placar">
-  <div style="color:#1A5CFF">🔵 AZUL <span id="placarAzul">0</span></div>
-  <div id="tempo">⏱️ 02:00</div>
-  <div style="color:#FF0000"><span id="placarVermelho">0</span> VERMELHO 🔴</div>
-</div>
-
+<div class="placar"><div style="color:#1A5CFF">🔵 AZUL <span id="placarAzul">0</span></div><div id="tempo">⏱️ 02:00</div><div style="color:#FF0000"><span id="placarVermelho">0</span> VERMELHO 🔴</div></div>
 <div id="login" class="card">
-  <h3>Escolha seu personagem</h3>
-  <div class="pers" id="listaPers"><span class="ativo" data-p="🦊">🦊</span><span data-p="🐰">🐰</span><span data-p="🐻">🐻</span><span data-p="🐱">🐱</span><span data-p="🦁">🦁</span><span data-p="🐼">🐼</span></div>
-  <input id="nome" placeholder="Digite seu nome">
-  <div class="times"><button id="btnAzul" class="ativo" style="background:#1A5CFF" onclick="setTime('azul')">🔵 TIME AZUL</button><button id="btnVermelho" style="background:#FF0000" onclick="setTime('vermelho')">🔴 TIME VERMELHO</button></div>
-  <input id="codigo" placeholder="Código da sala (só aluno)">
-  <button class="btn-prof" onclick="criarSala()">👨‍🏫 CRIAR SALA (PROFESSOR)</button>
-  <button class="btn-aluno" onclick="entrarSala()">🎮 ENTRAR NA SALA</button>
-  <p id="msg" style="color:red"></p>
+<h3>Escolha seu personagem</h3>
+<div class="pers" id="listaPers"><span class="ativo" data-p="🦊">🦊</span><span data-p="🐰">🐰</span><span data-p="🐻">🐻</span><span data-p="🐱">🐱</span><span data-p="🦁">🦁</span><span data-p="🐼">🐼</span></div>
+<input id="nome" placeholder="Digite seu nome">
+<div class="times"><button id="btnAzul" class="ativo" style="background:#1A5CFF" onclick="setTime('azul')">🔵 TIME AZUL</button><button id="btnVermelho" style="background:#FF0000" onclick="setTime('vermelho')">🔴 TIME VERMELHO</button></div>
+<input id="codigo" placeholder="Código da sala (só aluno)">
+<button class="btn-prof" onclick="criarSala()">👨‍🏫 CRIAR SALA (PROFESSOR)</button>
+<button class="btn-aluno" onclick="entrarSala()">🎮 ENTRAR NA SALA</button>
+<p id="msg" style="color:red"></p>
 </div>
-
-<div id="salaInfo" class="card" style="display:none">
-  <p>Código da sala: <b id="codigoSala" style="font-size:30px;color:#FF6B00"></b></p>
-  <button class="btn-iniciar" onclick="iniciar()">▶️ INICIAR JOGO - 2 MINUTOS</button>
-  <p>Arraste pra empurrar a bola gigante até o gol do outro time!</p>
-</div>
-
-<div id="campo">
-  <div class="gol golE"></div><div class="gol golD"></div>
-  <div class="linha"></div><div class="circulo"></div>
-  <div id="bola">🎈</div>
-  <div id="msgGol"></div>
-</div>
-
+<div id="salaInfo" class="card" style="display:none"><p>Código da sala: <b id="codigoSala" style="font-size:30px;color:#FF6B00"></b></p><button class="btn-iniciar" onclick="iniciar()">▶️ INICIAR JOGO - 2 MINUTOS</button><p>Arraste pra empurrar a bola!</p></div>
+<div id="campo"><div class="gol golE"></div><div class="gol golD"></div><div class="linha"></div><div class="circulo"></div><div id="bola">🎈</div><div id="msgGol"></div></div>
 <script>
 const socket=io(); let personagem='🦊', time='azul', codigoAtual='';
-document.querySelectorAll('.pers span').forEach(el=>el.onclick=()=>{
-  document.querySelectorAll('.pers span').forEach(s=>s.classList.remove('ativo')); el.classList.add('ativo'); personagem=el.dataset.p;
-});
+document.querySelectorAll('.pers span').forEach(el=>el.onclick=()=>{ document.querySelectorAll('.pers span').forEach(s=>s.classList.remove('ativo')); el.classList.add('ativo'); personagem=el.dataset.p; });
 function setTime(t){ time=t; document.getElementById('btnAzul').classList.toggle('ativo',t==='azul'); document.getElementById('btnVermelho').classList.toggle('ativo',t==='vermelho'); }
 function criarSala(){ const nome=document.getElementById('nome').value.trim(); if(!nome) return alert('Digite seu nome!'); socket.emit('criar_sala',{nome}); }
 function entrarSala(){ const nome=document.getElementById('nome').value.trim(); const codigo=document.getElementById('codigo').value.trim(); if(!nome||!codigo) return alert('Digite nome e código!'); codigoAtual=codigo; socket.emit('entrar_sala',{nome,codigo,personagem,time}); }
@@ -82,17 +61,20 @@ socket.on('atualizar',(s)=>{
   document.getElementById('placarAzul').innerText=s.placar.azul; document.getElementById('placarVermelho').innerText=s.placar.vermelho;
   let m=Math.floor(s.tempo/60), seg=s.tempo%60; document.getElementById('tempo').innerText=`⏱️ 0${m}:${seg<10?'0':''}${seg}`;
   document.getElementById('login').style.display='none'; document.getElementById('campo').style.display='block';
-  document.getElementById('bola').style.left=s.bola.x+'px'; document.getElementById('bola').style.top=s.bola.y+'px';
+  let bola=document.getElementById('bola'); bola.style.left=s.bola.x+'px'; bola.style.top=s.bola.y+'px';
   document.querySelectorAll('.jogador').forEach(e=>e.remove());
   s.jogadores.forEach(j=>{ let d=document.createElement('div'); d.className='jogador'; d.style.left=j.x+'px'; d.style.top=j.y+'px'; d.innerHTML=`<span class="emoji">${j.personagem}</span><span class="nome" style="border:2px solid ${j.time==='azul'?'#1A5CFF':'#FF0000'}">${j.nome}</span>`; document.getElementById('campo').appendChild(d); });
 });
 socket.on('gol',(txt)=>{ let e=document.getElementById('msgGol'); e.innerText=txt; e.style.display='block'; setTimeout(()=>e.style.display='none',2000); });
 socket.on('fim',(placar)=>{ alert(`FIM DE JOGO! 🏆\nAzul ${placar.azul} x ${placar.vermelho} Vermelho`); });
 socket.on('erro',(msg)=>document.getElementById('msg').innerText=msg);
-document.getElementById('campo').addEventListener('pointermove',e=>{
+function mover(e){
   if(!codigoAtual) return; const r=document.getElementById('campo').getBoundingClientRect();
-  socket.emit('mover',{codigo:codigoAtual,x:e.clientX-r.left-25,y:e.clientY-r.top-30});
-});
+  let x=(e.clientX-r.left)*(800/r.width); let y=(e.clientY-r.top)*(560/r.height);
+  socket.emit('mover',{codigo:codigoAtual,x,y});
+}
+document.getElementById('campo').addEventListener('pointermove',mover);
+document.getElementById('campo').addEventListener('pointerdown',mover);
 </script>
 </body>
 </html>
