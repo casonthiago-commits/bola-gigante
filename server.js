@@ -1,40 +1,97 @@
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-app.use(express.static('public'));
-let salas = {};
-function enviar(codigo){
-  let s = salas[codigo]; if(!s) return;
-  io.to(codigo).emit('atualizar', { placar: s.placar, tempo: s.tempo, bola: s.bola, jogadores: Object.values(s.jogadores) });
-}
-io.on('connection', (socket)=>{
-  socket.on('criar_sala', ()=>{ let codigo = Math.floor(1000+Math.random()*9000).toString(); salas[codigo]={jogadores:{},bola:{x:400,y:280,vx:0,vy:0},placar:{azul:0,vermelho:0},tempo:120,jogando:false,contador:0}; socket.join(codigo); socket.emit('sala_criada',{codigo}); });
-  socket.on('entrar_sala', (d)=>{ let s=salas[d.codigo]; if(!s){ socket.emit('erro','Sala não encontrada'); return; } socket.join(d.codigo); s.jogadores[socket.id]={nome:d.nome, personagem:d.personagem||'🦊', time:d.time||'azul', x: d.time==='azul'?180:620, y:280+Math.random()*100, andando:false, dir: d.time==='azul'?1:-1 }; enviar(d.codigo); });
-  socket.on('mover', (d)=>{ let s=salas[d.codigo]; if(s && s.jogadores[socket.id]){ let j=s.jogadores[socket.id]; j.dir = d.x > j.x ? 1 : -1; j.andando = Math.abs(d.x - j.x) > 2; j.x=d.x; j.y=d.y; } });
-  socket.on('iniciar_jogo', (d)=>{ let codigo = typeof d === 'string' ? d : d.codigo; let s=salas[codigo]; if(s){ s.jogando=true; s.tempo=120; s.contador=0; s.placar={azul:0,vermelho:0}; s.bola={x:400,y:280,vx:0,vy:0}; enviar(codigo); } });
-  socket.on('disconnect', ()=>{ for(let c in salas){ if(salas[c].jogadores[socket.id]){ delete salas[c].jogadores[socket.id]; enviar(c); } } });
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOLA GIGANTE - HÓQUEI LARANJA</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial}
+body{background:linear-gradient(180deg,#1A1A1A,#2B2B2B,#3A1C00);min-height:100vh;color:#fff;overflow-x:hidden}
+.topo{text-align:center;padding:12px 8px 4px}
+.topo h1{font-size:42px;font-weight:900;letter-spacing:1px;color:#FF6B00;text-shadow:3px 3px 0 #fff, 0 5px 15px rgba(255,107,0,.6);animation:brilho 2s infinite}
+@keyframes brilho{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+.sub{font-size:13px;opacity:.9;color:#FFD8B0}
+.placar{display:flex;justify-content:center;gap:10px;align-items:center;margin:10px}
+.placar .time{background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-weight:900;font-size:22px;box-shadow:0 6px 0 rgba(0,0,0,.4);display:flex;gap:8px;align-items:center}
+#tempo{background:#FFD800;color:#111;padding:10px 18px;border-radius:999px;font-weight:900;font-size:22px;box-shadow:0 6px 0 rgba(0,0,0,.4)}
+.card{background:rgba(255,255,255,.97);color:#111;width:94%;max-width:420px;margin:12px auto;padding:20px;border-radius:28px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.5)}
+.card h3{font-size:20px;margin-bottom:6px}
+.pers{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:10px 0}
+.pers span{font-size:42px;cursor:pointer;padding:6px;border-radius:18px;background:#FFF0E0;transition:.2s;animation:flutuar 2s ease-in-out infinite}
+.pers span:nth-child(2){animation-delay:.2s}.pers span:nth-child(3){animation-delay:.4s}.pers span:nth-child(4){animation-delay:.6s}
+@keyframes flutuar{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.pers span.ativo{border:4px solid #FF6B00;background:#FFD8B0;transform:scale(1.15) rotate(-5deg)}
+input{width:100%;padding:14px;border-radius:16px;border:2px solid #E5E5E5;margin:6px 0;font-size:16px;outline:none}
+input:focus{border-color:#FF6B00}
+.times{display:flex;gap:8px;margin:10px 0}
+.times button{flex:1;padding:14px;border-radius:16px;font-weight:900;cursor:pointer;color:#fff;border:4px solid transparent;font-size:15px}
+.times button.ativo{border-color:#111;transform:scale(1.04);box-shadow:0 6px 12px rgba(0,0,0,.2)}
+.btn{width:100%;padding:15px;border:none;border-radius:16px;font-weight:900;color:#fff;margin-top:8px;cursor:pointer;font-size:16px;box-shadow:0 5px 0 rgba(0,0,0,.3);transition:.1s}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.btn-prof{background:linear-gradient(90deg,#FF6B00,#FF9A00)}.btn-aluno{background:linear-gradient(90deg,#1A5CFF,#00C6FF)}.btn-iniciar{background:linear-gradient(90deg,#00C853,#00E676)}
+
+/* QUADRA LARANJA */
+#campo{display:none;position:relative;width:800px;max-width:96vw;height:560px;margin:12px auto;background:linear-gradient(180deg,#FF8C1A,#FF6B00 50%,#E65100);border:6px solid #fff;border-radius:24px;overflow:hidden;touch-action:none;box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 0 60px rgba(255,255,255,.15)}
+.gol{position:absolute;top:180px;width:18px;height:200px;z-index:1;border-radius:6px}
+.golE{left:0;background:#1A5CFF;box-shadow:0 0 20px #1A5CFF}.golD{right:0;background:#111;box-shadow:0 0 20px #000}
+.linha{position:absolute;left:50%;top:0;bottom:0;width:4px;background:rgba(255,255,255,.95)}
+.circulo{position:absolute;left:50%;top:50%;width:150px;height:150px;border:4px solid rgba(255,255,255,.95);border-radius:50%;transform:translate(-50%,-50%)}
+.circulo2{position:absolute;left:50%;top:50%;width:70px;height:70px;background:rgba(255,255,255,.25);border-radius:50%;transform:translate(-50%,-50%)}
+
+/* BOLA PRETA ESTILO HÓQUEI - DISCO */
+#bola{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 32% 28%, #4A4A4A 0%, #1A1A1A 35%, #000 70%, #000 100%);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;box-shadow:0 15px 25px rgba(0,0,0,.6), inset 0 -12px 20px rgba(0,0,0,.8), inset 0 8px 12px rgba(255,255,255,.25);z-index:5;transform:translate(-50%,-50%);border:4px solid #333}
+#bola::before{content:'🏒';position:absolute;font-size:36px;opacity:.9}
+#bola::after{content:'';position:absolute;top:14px;left:20px;width:30px;height:18px;background:rgba(255,255,255,.55);border-radius:50%;filter:blur(3px);transform:rotate(-20deg)}
+
+.jogador{position:absolute;text-align:center;z-index:6;transform:translate(-50%,-50%);pointer-events:none}
+.jogador .corpo{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px;background:#fff;box-shadow:0 8px 0 rgba(0,0,0,.3), 0 10px 20px rgba(0,0,0,.3);animation:pular .5s ease-in-out infinite alternate}
+.jogador.andando .corpo{animation:correr .25s ease-in-out infinite alternate}
+@keyframes pular{from{transform:translateY(0) scale(1)}to{transform:translateY(-8px) scale(1.05)}}
+@keyframes correr{from{transform:translateY(0) rotate(-8deg) scale(1.05)}to{transform:translateY(-10px) rotate(8deg) scale(1.05)}}
+.jogador .sombra{width:44px;height:10px;background:rgba(0,0,0,.35);border-radius:50%;margin:2px auto 0;animation:sombra .5s ease-in-out infinite alternate}
+@keyframes sombra{from{transform:scaleX(1);opacity:.5}to{transform:scaleX(.7);opacity:.25}}
+.jogador .nome{background:#fff;color:#111;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:900;box-shadow:0 3px 0 rgba(0,0,0,.2);display:inline-block;margin-top:2px}
+#msgGol{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) scale(.5);background:#fff;color:#111;padding:18px 28px;border-radius:24px;font-size:28px;font-weight:900;display:none;z-index:20;box-shadow:0 15px 30px rgba(0,0,0,.4);animation:pop .3s forwards}
+@keyframes pop{to{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}}
+</style>
+</head>
+<body>
+<div class="topo"><h1>🏒 HÓQUEI LARANJA</h1><div class="sub">Bola preta gigante • Empurre até o gol!</div></div>
+<div class="placar"><div class="time" style="border:3px solid #1A5CFF">🔵 AZUL <span id="placarAzul">0</span></div><div id="tempo">⏱️ 02:00</div><div class="time" style="border:3px solid #111"><span id="placarVermelho">0</span> PRETO ⚫</div></div>
+<div id="login" class="card">
+<h3>👾 Escolha seu jogador</h3>
+<div class="pers" id="listaPers"><span class="ativo" data-p="🦊">🦊</span><span data-p="🐰">🐰</span><span data-p="🐻">🐻</span><span data-p="🐱">🐱</span><span data-p="🦁">🦁</span><span data-p="🐼">🐼</span><span data-p="🐶">🐶</span><span data-p="🦄">🦄</span></div>
+<input id="nome" placeholder="✏️ Digite seu nome">
+<div class="times"><button id="btnAzul" class="ativo" style="background:#1A5CFF" onclick="setTime('azul')">🔵 TIME AZUL</button><button id="btnVermelho" style="background:#111" onclick="setTime('vermelho')">⚫ TIME PRETO</button></div>
+<input id="codigo" placeholder="🔑 Código da sala (só aluno)">
+<button class="btn btn-prof" onclick="criarSala()">👨‍🏫 CRIAR SALA (PROFESSOR)</button>
+<button class="btn btn-aluno" onclick="entrarSala()">🎮 ENTRAR NA SALA</button>
+<p id="msg" style="color:red;font-weight:bold"></p>
+</div>
+<div id="salaInfo" class="card" style="display:none"><p>Código da sala:</p><b id="codigoSala" style="font-size:42px;color:#FF6B00;letter-spacing:4px"></b><button class="btn btn-iniciar" onclick="iniciar()">▶️ INICIAR JOGO - 2 MINUTOS</button><p>👉 Arraste seu jogador pra empurrar o disco preto!</p></div>
+<div id="campo"><div class="gol golE"></div><div class="gol golD"></div><div class="linha"></div><div class="circulo"></div><div class="circulo2"></div><div id="bola"></div><div id="msgGol"></div></div>
+<script>
+const socket=io(); let personagem='🦊', time='azul', codigoAtual='';
+document.querySelectorAll('.pers span').forEach(el=>el.onclick=()=>{ document.querySelectorAll('.pers span').forEach(s=>s.classList.remove('ativo')); el.classList.add('ativo'); personagem=el.dataset.p; });
+function setTime(t){ time=t; document.getElementById('btnAzul').classList.toggle('ativo',t==='azul'); document.getElementById('btnVermelho').classList.toggle('ativo',t==='vermelho'); }
+function criarSala(){ const nome=document.getElementById('nome').value.trim(); if(!nome) return alert('Digite seu nome!'); socket.emit('criar_sala',{nome}); }
+function entrarSala(){ const nome=document.getElementById('nome').value.trim(); const codigo=document.getElementById('codigo').value.trim(); if(!nome||!codigo) return alert('Digite nome e código!'); codigoAtual=codigo; socket.emit('entrar_sala',{nome,codigo,personagem,time}); }
+function iniciar(){ socket.emit('iniciar_jogo',{codigo:codigoAtual}); }
+socket.on('sala_criada',({codigo})=>{ codigoAtual=codigo; document.getElementById('login').style.display='none'; document.getElementById('salaInfo').style.display='block'; document.getElementById('codigoSala').innerText=codigo; document.getElementById('campo').style.display='block'; socket.emit('entrar_sala',{nome:document.getElementById('nome').value,codigo,personagem,time}); });
+socket.on('atualizar',(s)=>{
+  document.getElementById('placarAzul').innerText=s.placar.azul; document.getElementById('placarVermelho').innerText=s.placar.vermelho;
+  let m=Math.floor(s.tempo/60), seg=s.tempo%60; document.getElementById('tempo').innerText=`⏱️ 0${m}:${seg<10?'0':''}${seg}`;
+  document.getElementById('login').style.display='none'; document.getElementById('campo').style.display='block';
+  let bola=document.getElementById('bola'); bola.style.left=s.bola.x+'px'; bola.style.top=s.bola.y+'px';
+  document.querySelectorAll('.jogador').forEach(e=>e.remove());
+  s.jogadores.forEach(j=>{ let d=document.createElement('div'); d.className='jogador'+(j.andando?' andando':''); d.style.left=j.x+'px'; d.style.top=j.y+'px'; let cor=j.time==='azul'?'#1A5CFF':'#111'; d.innerHTML=`<div class="corpo" style="border:4px solid ${cor}">${j.personagem}</div><div class="sombra"></div><span class="nome" style="border:2px solid ${cor}">${j.nome}</span>`; document.getElementById('campo').appendChild(d); });
 });
-setInterval(()=>{
-  for(let codigo in salas){
-    let s=salas[codigo]; if(!s.jogando) continue;
-    for(let id in s.jogadores){
-      let j=s.jogadores[id]; j.x=Math.max(30,Math.min(770,j.x)); j.y=Math.max(30,Math.min(530,j.y));
-      let dx=s.bola.x-j.x, dy=s.bola.y-j.y; let d=Math.sqrt(dx*dx+dy*dy);
-      if(d<110 && d>0){ s.bola.vx+=dx/d*3.5; s.bola.vy+=dy/d*3.5; }
-    }
-    s.bola.x+=s.bola.vx; s.bola.y+=s.bola.vy; s.bola.vx*=0.97; s.bola.vy*=0.97;
-    let noGol = s.bola.y>190 && s.bola.y<370;
-    if(s.bola.x<20 && noGol){ s.placar.vermelho++; s.bola={x:400,y:280,vx:0,vy:0}; io.to(codigo).emit('gol','GOOOL DO VERMELHO! 🔴'); enviar(codigo); continue; }
-    if(s.bola.x>780 && noGol){ s.placar.azul++; s.bola={x:400,y:280,vx:0,vy:0}; io.to(codigo).emit('gol','GOOOL DO AZUL! 🔵'); enviar(codigo); continue; }
-    if(s.bola.y<55){ s.bola.y=55; s.bola.vy=Math.abs(s.bola.vy)*0.7; }
-    if(s.bola.y>505){ s.bola.y=505; s.bola.vy=-Math.abs(s.bola.vy)*0.7; }
-    if(s.bola.x<55 && !noGol){ s.bola.x=55; s.bola.vx=Math.abs(s.bola.vx)*0.7; }
-    if(s.bola.x>745 && !noGol){ s.bola.x=745; s.bola.vx=-Math.abs(s.bola.vx)*0.7; }
-    if(s.bola.x<-50||s.bola.x>850||s.bola.y<-50||s.bola.y>610){ s.bola={x:400,y:280,vx:0,vy:0}; }
-    s.contador++; if(s.contador%30===0){ s.tempo--; }
-    if(s.tempo<=0){ s.jogando=false; io.to(codigo).emit('fim',s.placar); }
-    enviar(codigo);
-  }
-},1000/30);
-http.listen(process.env.PORT||3000, ()=> console.log('Rodando'));
+socket.on('gol',(txt)=>{ let e=document.getElementById('msgGol'); e.innerText=txt; e.style.display='block'; setTimeout(()=>e.style.display='none',2500); });
+socket.on('fim',(placar)=>{ alert(`🏆 FIM DE JOGO!\nAzul ${placar.azul} x ${placar.vermelho} Preto`); });
+socket.on('erro',(msg)=>document.getElementById('msg').innerText=msg);
+function mover(e){ if(!codigoAtual) return; const r=document.getElementById('campo').getBoundingClientRect(); let x=(e.clientX-r.left)*(800/r.width); let y=(e.clientY-r.top)*(560/r.height); socket.emit('mover',{codigo:codigoAtual,x,y}); }
+document.getElementById('campo').addEventListener('pointermove',mover);
+document.getElementById('campo').addEventListener('pointerdown',mover);
+</script>
+</body>
+</html>
