@@ -2,69 +2,74 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BOLA GIGANTE 2.0</title>
+<title>BOLA GIGANTE - HÓQUEI LARANJA</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial}
-body{background:linear-gradient(180deg,#0F2027,#203A43,#2C5364);min-height:100vh;color:#fff;overflow-x:hidden}
+body{background:linear-gradient(180deg,#1A1A1A,#2B2B2B,#3A1C00);min-height:100vh;color:#fff;overflow-x:hidden}
 .topo{text-align:center;padding:12px 8px 4px}
-.topo h1{font-size:42px;font-weight:900;letter-spacing:1px;background:linear-gradient(90deg,#FFD800,#FF6B00,#FF00FF,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 0 rgba(0,0,0,.3));animation:brilho 3s infinite}
+.topo h1{font-size:42px;font-weight:900;letter-spacing:1px;color:#FF6B00;text-shadow:3px 3px 0 #fff, 0 5px 15px rgba(255,107,0,.6);animation:brilho 2s infinite}
 @keyframes brilho{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
-.sub{font-size:13px;opacity:.8}
+.sub{font-size:13px;opacity:.9;color:#FFD8B0}
 .placar{display:flex;justify-content:center;gap:10px;align-items:center;margin:10px}
-.placar .time{background:rgba(255,255,255,.95);color:#111;padding:10px 18px;border-radius:999px;font-weight:900;font-size:22px;box-shadow:0 6px 0 rgba(0,0,0,.25);display:flex;gap:8px;align-items:center}
-#tempo{background:#FFD800;color:#111;padding:10px 18px;border-radius:999px;font-weight:900;font-size:22px;box-shadow:0 6px 0 rgba(0,0,0,.25)}
-.card{background:rgba(255,255,255,.96);color:#111;width:94%;max-width:420px;margin:12px auto;padding:20px;border-radius:28px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.35)}
+.placar .time{background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-weight:900;font-size:22px;box-shadow:0 6px 0 rgba(0,0,0,.4);display:flex;gap:8px;align-items:center}
+#tempo{background:#FFD800;color:#111;padding:10px 18px;border-radius:999px;font-weight:900;font-size:22px;box-shadow:0 6px 0 rgba(0,0,0,.4)}
+.card{background:rgba(255,255,255,.97);color:#111;width:94%;max-width:420px;margin:12px auto;padding:20px;border-radius:28px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.5)}
 .card h3{font-size:20px;margin-bottom:6px}
 .pers{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:10px 0}
-.pers span{font-size:42px;cursor:pointer;padding:6px;border-radius:18px;background:#F2F2F2;transition:.2s;animation:flutuar 2s ease-in-out infinite}
+.pers span{font-size:42px;cursor:pointer;padding:6px;border-radius:18px;background:#FFF0E0;transition:.2s;animation:flutuar 2s ease-in-out infinite}
 .pers span:nth-child(2){animation-delay:.2s}.pers span:nth-child(3){animation-delay:.4s}.pers span:nth-child(4){animation-delay:.6s}
 @keyframes flutuar{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-.pers span.ativo{border:4px solid #FF6B00;background:#FFE9D0;transform:scale(1.15) rotate(-5deg)}
+.pers span.ativo{border:4px solid #FF6B00;background:#FFD8B0;transform:scale(1.15) rotate(-5deg)}
 input{width:100%;padding:14px;border-radius:16px;border:2px solid #E5E5E5;margin:6px 0;font-size:16px;outline:none}
 input:focus{border-color:#FF6B00}
 .times{display:flex;gap:8px;margin:10px 0}
 .times button{flex:1;padding:14px;border-radius:16px;font-weight:900;cursor:pointer;color:#fff;border:4px solid transparent;font-size:15px}
 .times button.ativo{border-color:#111;transform:scale(1.04);box-shadow:0 6px 12px rgba(0,0,0,.2)}
-.btn{width:100%;padding:15px;border:none;border-radius:16px;font-weight:900;color:#fff;margin-top:8px;cursor:pointer;font-size:16px;box-shadow:0 5px 0 rgba(0,0,0,.25);transition:.1s}
-.btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.btn{width:100%;padding:15px;border:none;border-radius:16px;font-weight:900;color:#fff;margin-top:8px;cursor:pointer;font-size:16px;box-shadow:0 5px 0 rgba(0,0,0,.3);transition:.1s}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
 .btn-prof{background:linear-gradient(90deg,#FF6B00,#FF9A00)}.btn-aluno{background:linear-gradient(90deg,#1A5CFF,#00C6FF)}.btn-iniciar{background:linear-gradient(90deg,#00C853,#00E676)}
-#campo{display:none;position:relative;width:800px;max-width:96vw;height:560px;margin:12px auto;background:linear-gradient(180deg,#3DDC84,#2ECC71 60%,#27AE60);border:6px solid #fff;border-radius:24px;overflow:hidden;touch-action:none;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+
+/* QUADRA LARANJA */
+#campo{display:none;position:relative;width:800px;max-width:96vw;height:560px;margin:12px auto;background:linear-gradient(180deg,#FF8C1A,#FF6B00 50%,#E65100);border:6px solid #fff;border-radius:24px;overflow:hidden;touch-action:none;box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 0 60px rgba(255,255,255,.15)}
 .gol{position:absolute;top:180px;width:18px;height:200px;z-index:1;border-radius:6px}
-.golE{left:0;background:#1A5CFF;box-shadow:0 0 20px #1A5CFF}.golD{right:0;background:#FF1744;box-shadow:0 0 20px #FF1744}
-.linha{position:absolute;left:50%;top:0;bottom:0;width:4px;background:rgba(255,255,255,.9)}
-.circulo{position:absolute;left:50%;top:50%;width:150px;height:150px;border:4px solid rgba(255,255,255,.9);border-radius:50%;transform:translate(-50%,-50%)}
-#bola{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff 0%,#FFD800 20%,#FF6B00 45%,#FF00FF 70%,#7B00FF 100%);display:flex;align-items:center;justify-content:center;font-size:52px;box-shadow:0 15px 25px rgba(0,0,0,.45), inset 0 -10px 20px rgba(0,0,0,.25);z-index:5;transform:translate(-50%,-50%);animation:girar 4s linear infinite}
-#bola::after{content:'';position:absolute;top:12px;left:18px;width:28px;height:28px;background:rgba(255,255,255,.8);border-radius:50%;filter:blur(2px)}
-@keyframes girar{to{transform:translate(-50%,-50%) rotate(360deg)}}
-.jogador{position:absolute;text-align:center;z-index:6;transform:translate(-50%,-50%);transition:transform .05s;pointer-events:none}
-.jogador .corpo{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px;background:#fff;box-shadow:0 8px 0 rgba(0,0,0,.25), 0 10px 20px rgba(0,0,0,.3);animation:pular .5s ease-in-out infinite alternate}
+.golE{left:0;background:#1A5CFF;box-shadow:0 0 20px #1A5CFF}.golD{right:0;background:#111;box-shadow:0 0 20px #000}
+.linha{position:absolute;left:50%;top:0;bottom:0;width:4px;background:rgba(255,255,255,.95)}
+.circulo{position:absolute;left:50%;top:50%;width:150px;height:150px;border:4px solid rgba(255,255,255,.95);border-radius:50%;transform:translate(-50%,-50%)}
+.circulo2{position:absolute;left:50%;top:50%;width:70px;height:70px;background:rgba(255,255,255,.25);border-radius:50%;transform:translate(-50%,-50%)}
+
+/* BOLA PRETA ESTILO HÓQUEI - DISCO */
+#bola{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 32% 28%, #4A4A4A 0%, #1A1A1A 35%, #000 70%, #000 100%);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;box-shadow:0 15px 25px rgba(0,0,0,.6), inset 0 -12px 20px rgba(0,0,0,.8), inset 0 8px 12px rgba(255,255,255,.25);z-index:5;transform:translate(-50%,-50%);border:4px solid #333}
+#bola::before{content:'🏒';position:absolute;font-size:36px;opacity:.9}
+#bola::after{content:'';position:absolute;top:14px;left:20px;width:30px;height:18px;background:rgba(255,255,255,.55);border-radius:50%;filter:blur(3px);transform:rotate(-20deg)}
+
+.jogador{position:absolute;text-align:center;z-index:6;transform:translate(-50%,-50%);pointer-events:none}
+.jogador .corpo{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px;background:#fff;box-shadow:0 8px 0 rgba(0,0,0,.3), 0 10px 20px rgba(0,0,0,.3);animation:pular .5s ease-in-out infinite alternate}
 .jogador.andando .corpo{animation:correr .25s ease-in-out infinite alternate}
 @keyframes pular{from{transform:translateY(0) scale(1)}to{transform:translateY(-8px) scale(1.05)}}
 @keyframes correr{from{transform:translateY(0) rotate(-8deg) scale(1.05)}to{transform:translateY(-10px) rotate(8deg) scale(1.05)}}
-.jogador .sombra{width:44px;height:10px;background:rgba(0,0,0,.3);border-radius:50%;margin:2px auto 0;animation:sombra .5s ease-in-out infinite alternate}
+.jogador .sombra{width:44px;height:10px;background:rgba(0,0,0,.35);border-radius:50%;margin:2px auto 0;animation:sombra .5s ease-in-out infinite alternate}
 @keyframes sombra{from{transform:scaleX(1);opacity:.5}to{transform:scaleX(.7);opacity:.25}}
 .jogador .nome{background:#fff;color:#111;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:900;box-shadow:0 3px 0 rgba(0,0,0,.2);display:inline-block;margin-top:2px}
 #msgGol{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) scale(.5);background:#fff;color:#111;padding:18px 28px;border-radius:24px;font-size:28px;font-weight:900;display:none;z-index:20;box-shadow:0 15px 30px rgba(0,0,0,.4);animation:pop .3s forwards}
 @keyframes pop{to{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}}
-.efeito-gol{position:absolute;inset:0;pointer-events:none;z-index:15;display:none}
 </style>
 </head>
 <body>
-<div class="topo"><h1>🌈 BOLA GIGANTE 2.0</h1><div class="sub">Empurre a bola gigante • Quem fizer mais gols vence!</div></div>
-<div class="placar"><div class="time" style="border:3px solid #1A5CFF">🔵 AZUL <span id="placarAzul">0</span></div><div id="tempo">⏱️ 02:00</div><div class="time" style="border:3px solid #FF1744"><span id="placarVermelho">0</span> VERMELHO 🔴</div></div>
+<div class="topo"><h1>🏒 HÓQUEI LARANJA</h1><div class="sub">Bola preta gigante • Empurre até o gol!</div></div>
+<div class="placar"><div class="time" style="border:3px solid #1A5CFF">🔵 AZUL <span id="placarAzul">0</span></div><div id="tempo">⏱️ 02:00</div><div class="time" style="border:3px solid #111"><span id="placarVermelho">0</span> PRETO ⚫</div></div>
 <div id="login" class="card">
-<h3>👾 Escolha seu personagem</h3>
+<h3>👾 Escolha seu jogador</h3>
 <div class="pers" id="listaPers"><span class="ativo" data-p="🦊">🦊</span><span data-p="🐰">🐰</span><span data-p="🐻">🐻</span><span data-p="🐱">🐱</span><span data-p="🦁">🦁</span><span data-p="🐼">🐼</span><span data-p="🐶">🐶</span><span data-p="🦄">🦄</span></div>
 <input id="nome" placeholder="✏️ Digite seu nome">
-<div class="times"><button id="btnAzul" class="ativo" style="background:#1A5CFF" onclick="setTime('azul')">🔵 TIME AZUL</button><button id="btnVermelho" style="background:#FF1744" onclick="setTime('vermelho')">🔴 TIME VERMELHO</button></div>
+<div class="times"><button id="btnAzul" class="ativo" style="background:#1A5CFF" onclick="setTime('azul')">🔵 TIME AZUL</button><button id="btnVermelho" style="background:#111" onclick="setTime('vermelho')">⚫ TIME PRETO</button></div>
 <input id="codigo" placeholder="🔑 Código da sala (só aluno)">
 <button class="btn btn-prof" onclick="criarSala()">👨‍🏫 CRIAR SALA (PROFESSOR)</button>
 <button class="btn btn-aluno" onclick="entrarSala()">🎮 ENTRAR NA SALA</button>
 <p id="msg" style="color:red;font-weight:bold"></p>
 </div>
-<div id="salaInfo" class="card" style="display:none"><p>Código da sala:</p><b id="codigoSala" style="font-size:42px;color:#FF6B00;letter-spacing:4px"></b><button class="btn btn-iniciar" onclick="iniciar()">▶️ INICIAR JOGO - 2 MINUTOS</button><p>👉 Arraste seu personagem pra empurrar a bola gigante!</p></div>
-<div id="campo"><div class="gol golE"></div><div class="gol golD"></div><div class="linha"></div><div class="circulo"></div><div id="bola">🎈</div><div id="msgGol"></div><div class="efeito-gol" id="efeitoGol"></div></div>
+<div id="salaInfo" class="card" style="display:none"><p>Código da sala:</p><b id="codigoSala" style="font-size:42px;color:#FF6B00;letter-spacing:4px"></b><button class="btn btn-iniciar" onclick="iniciar()">▶️ INICIAR JOGO - 2 MINUTOS</button><p>👉 Arraste seu jogador pra empurrar o disco preto!</p></div>
+<div id="campo"><div class="gol golE"></div><div class="gol golD"></div><div class="linha"></div><div class="circulo"></div><div class="circulo2"></div><div id="bola"></div><div id="msgGol"></div></div>
 <script>
 const socket=io(); let personagem='🦊', time='azul', codigoAtual='';
 document.querySelectorAll('.pers span').forEach(el=>el.onclick=()=>{ document.querySelectorAll('.pers span').forEach(s=>s.classList.remove('ativo')); el.classList.add('ativo'); personagem=el.dataset.p; });
@@ -79,10 +84,10 @@ socket.on('atualizar',(s)=>{
   document.getElementById('login').style.display='none'; document.getElementById('campo').style.display='block';
   let bola=document.getElementById('bola'); bola.style.left=s.bola.x+'px'; bola.style.top=s.bola.y+'px';
   document.querySelectorAll('.jogador').forEach(e=>e.remove());
-  s.jogadores.forEach(j=>{ let d=document.createElement('div'); d.className='jogador'+(j.andando?' andando':''); d.style.left=j.x+'px'; d.style.top=j.y+'px'; let cor=j.time==='azul'?'#1A5CFF':'#FF1744'; d.innerHTML=`<div class="corpo" style="border:4px solid ${cor}">${j.personagem}</div><div class="sombra"></div><span class="nome" style="border:2px solid ${cor}">${j.nome}</span>`; document.getElementById('campo').appendChild(d); });
+  s.jogadores.forEach(j=>{ let d=document.createElement('div'); d.className='jogador'+(j.andando?' andando':''); d.style.left=j.x+'px'; d.style.top=j.y+'px'; let cor=j.time==='azul'?'#1A5CFF':'#111'; d.innerHTML=`<div class="corpo" style="border:4px solid ${cor}">${j.personagem}</div><div class="sombra"></div><span class="nome" style="border:2px solid ${cor}">${j.nome}</span>`; document.getElementById('campo').appendChild(d); });
 });
 socket.on('gol',(txt)=>{ let e=document.getElementById('msgGol'); e.innerText=txt; e.style.display='block'; setTimeout(()=>e.style.display='none',2500); });
-socket.on('fim',(placar)=>{ alert(`🏆 FIM DE JOGO!\nAzul ${placar.azul} x ${placar.vermelho} Vermelho`); });
+socket.on('fim',(placar)=>{ alert(`🏆 FIM DE JOGO!\nAzul ${placar.azul} x ${placar.vermelho} Preto`); });
 socket.on('erro',(msg)=>document.getElementById('msg').innerText=msg);
 function mover(e){ if(!codigoAtual) return; const r=document.getElementById('campo').getBoundingClientRect(); let x=(e.clientX-r.left)*(800/r.width); let y=(e.clientY-r.top)*(560/r.height); socket.emit('mover',{codigo:codigoAtual,x,y}); }
 document.getElementById('campo').addEventListener('pointermove',mover);
